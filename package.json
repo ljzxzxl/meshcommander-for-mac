@@ -1,9 +1,10 @@
 {
   "name": "meshcommander-for-macos",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Native macOS app (Apple Silicon & Intel) for MeshCommander, the Intel AMT remote management console",
   "type": "module",
   "scripts": {
+    "compile": "node compiler/build.mjs --all",
     "build": "node build/mkapp.mjs",
     "build:arm64": "node build/mkapp.mjs --arch arm64",
     "build:x64": "node build/mkapp.mjs --arch x64",
