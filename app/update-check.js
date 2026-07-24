@@ -160,6 +160,9 @@
                 for (var j = 0; j < sub.items.length; j++) {
                     if (sub.items[j] === window.NW_UpdateMenuItem) {
                         var gui = require('nw.gui');
+                        // Rename the upstream checkbox so the two entries read
+                        // clearly: manual action vs. automatic-check switch.
+                        window.NW_UpdateMenuItem.label = 'Automatically Check for Updates';
                         sub.insert(new gui.MenuItem({ label: 'Check for Updates...', click: manualCheck }), j);
                         return true;
                     }
