@@ -123,6 +123,7 @@ cp dist/compiled/commander*.htm app/
 
 ### Notes
 
+- On startup the app checks GitHub Releases once for a newer version; when one exists, a small banner appears in the bottom-right corner linking to the download page. Nothing is downloaded or installed automatically, and no other data is sent.
 - Old AMT firmware that only supports TLS 1.0/1.1 with legacy ciphers is handled by `app/node-main.js`, which relaxes the Node TLS defaults inside the app.
 - Kerberos authentication is not available on macOS (same as the original gomesjj build).
 - IDER uses the pure-JavaScript implementation (the Windows-only `imrsdk.dll` path is not used).
@@ -198,6 +199,7 @@ cp dist/compiled/commander*.htm app/
 
 ### 说明
 
+- 应用启动时会检查一次 GitHub Releases 是否有新版本，发现新版时在右下角弹出提示条，点击可跳转下载页；不会自动下载或安装，也不会上报任何其它数据。
 - 只支持 TLS 1.0/1.1 和旧加密套件的老旧 AMT 固件，由 `app/node-main.js` 在应用内放宽 Node 的 TLS 默认限制来兼容。
 - macOS 上不支持 Kerberos 认证（与原 gomesjj 版本一致）。
 - IDER 使用纯 JavaScript 实现（不使用仅限 Windows 的 `imrsdk.dll` 路径）。
