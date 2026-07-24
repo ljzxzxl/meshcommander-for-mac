@@ -1,0 +1,18 @@
+{
+  "name": "meshcommander",
+  "app_name": "MeshCommander",
+  "version": "0.1.0",
+  "description": "Intel(R) Active Management Technology console tool",
+  "main": "commander.htm",
+  "node-main": "node-main.js",
+  "single-instance": false,
+  "window": {
+    "frame": true,
+    "icon": "favicon.png",
+    "toolbar": false,
+    "width": 970,
+    "min_width": 970,
+    "height": 760,
+    "min_height": 640
+  }
+}
