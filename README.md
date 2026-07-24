@@ -37,7 +37,7 @@ MeshCommander for macOS 是 [MeshCommander](https://github.com/Ylianst/MeshComma
     <td width="50%" align="center">
       <img src="docs/screenshots/remote-desktop-kvm.jpg" alt="Hardware KVM Remote Desktop" width="440">
       <br>
-      <strong>Hardware-KVM Remote Desktop / 硬件级 KVM 远程桌面</strong>
+      <strong>KVM Remote Desktop / KVM 远程桌面</strong>
     </td>
   </tr>
   <tr>
