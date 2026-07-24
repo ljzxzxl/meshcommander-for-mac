@@ -1,6 +1,6 @@
 # MeshCommander for macOS — 交接文档 (ONBOARDING)
 
-> 目的：让你在**另一台机器的全新会话**中，仅凭此文档就能快速接手本项目。三阶段路线图（壳 → CI → 自研编译器）已全部完成；`v0.2.0` 起 UI 由自研编译器从上游源码再生；`v0.2.1` 更换全新应用图标；`v0.2.2` 修复 TLS 锁图标裂图并将 README 改造为中英双语版。
+> 目的：让你在**另一台机器的全新会话**中，仅凭此文档就能快速接手本项目。三阶段路线图（壳 → CI → 自研编译器）已全部完成；`v0.2.0` 起 UI 由自研编译器从上游源码再生；`v0.2.1` 更换全新应用图标；`v0.2.2` 修复 TLS 锁图标裂图并将 README 改造为中英双语版；`v0.2.3` 落地统一更新机制（Help 菜单手动检查 + 基于 GitHub Releases 的自动检查）。
 
 ---
 
@@ -9,7 +9,7 @@
 Intel AMT (vPro) 远程管理控制台 [MeshCommander](https://github.com/Ylianst/MeshCommander) 的 **macOS 原生客户端**（Hardware-KVM / Serial-over-LAN / IDER / 电源控制等），支持 **Apple Silicon (arm64) + Intel (x64)** 双架构，可跑最新 macOS。对标已停更 4 年、仅 x86 的 gomesjj/MeshCommander。
 
 - 仓库：`git@github.com:ljzxzxl/meshcommander-for-mac.git`（分支 `main`，remote `origin`）
-- 已发布：`v0.1.0`（MVP + CI）、`v0.2.0`（自研编译器，UI 从上游源码再生）、`v0.2.1`（新版应用图标）、`v0.2.2`（TLS 锁图标裂图修复 + 双语 README）
+- 已发布：`v0.1.0`（MVP + CI）、`v0.2.0`（自研编译器，UI 从上游源码再生）、`v0.2.1`（新版应用图标）、`v0.2.2`（TLS 锁图标裂图修复 + 双语 README）、`v0.2.3`（统一更新机制）
 - 技术栈：**NW.js v0.113.0**（Chromium 149 / Node 26）壳 + 上游纯 Web 技术 UI；构建/编译脚本为 Node ESM（`.mjs`），无第三方 npm 依赖
 
 ### 版本号体系（容易混淆，先记住）
@@ -49,6 +49,7 @@ npm run dist                           # 双架构 + DMG 一次出齐
 | `upstream/` | Ylianst/MeshCommander 上游源码**原样隔离**（勿改），是编译器的输入；上游更新时整体替换再重新编译 |
 | `app/` | NW.js 应用负载：`commander.htm` + 9 个语言版（编译产物）、`package.json`（NW.js manifest）、`node-main.js`（兼容层）、`meshcommander.icns`/`favicon.png`（图标）、`images-commander/` 与 `images/`（lock/unlock.gif，TLS 状态指示器）等图片、`empty.iso`/`empty.img`（IDER 用） |
 | `app/node-main.js` | **UI 加载前的 Node 兼容层，勿删**：老 AMT 固件 TLS 放宽（`DEFAULT_MIN_VERSION='TLSv1'` + `:@SECLEVEL=0`）+ 新 Node 已移除的 `crypto.createCipher/createDecipher` 的 EVP_BytesToKey polyfill（否则旧版保存的密码数据无法解密） |
+| `app/update-check.js` | **更新检查脚本**（经 `app/package.json` 的 `inject_js_end` 注入，与页面同 JS context），见第 10 节 |
 | `build/mkapp.mjs` | 打包脚本：下载/缓存 NW.js → 组装 .app → PlistBuddy 改 Info.plist → ad-hoc codesign → 可选 hdiutil 出 DMG |
 | `compiler/build.mjs` | **自研编译器**（替代上游闭源 Windows-only "WebSite Compiler"），见第 4 节 |
 | `compiler/features.json` | 桌面版功能白名单（49 项），来源见第 4 节 |
@@ -86,6 +87,8 @@ npm run dist                           # 双架构 + DMG 一次出齐
 - **AppleScript UI 自动化**：应用菜单项名称随界面语言本地化（中文界面下 Language 菜单叫"语言能力"），且 0.9.7 英文菜单项与 0.9.5 措辞不同（"Chinese (Simplified)" vs "Simplified Chinese"）→ 点击前先动态 `get name of menu items` 再按实际名称点。
 - **截图截不到应用窗口**：主屏被全屏应用的 Space 占据时 `screencapture -x` 截不到别的 Space/副屏窗口 → 用 swift `CGWindowListCopyWindowInfo` 找主窗口 ID（owner=MeshCommander、layer=0、尺寸 970×792，忽略多个 1920×30 的菜单栏辅助窗口），再 `screencapture -l <id>` 按窗口截图。
 - **数据继承**：`app/package.json` 的 `name` 必须保持 `meshcommander`——与 gomesjj 旧版一致即共享 NW.js 用户数据目录，自动继承旧版的计算机列表与固定证书；改名会"丢"数据。
+- **生产版 NW.js 不支持 `--remote-debugging-port`**（SDK 版才有），无法用 CDP 验证页面状态 → UI 验证组合拳：AppleScript 读/点菜单（`tell (first process whose name contains "nwjs" or name contains "MeshCommander") to get name of every menu item of menu "Help" of menu bar 1`）+ 按窗口 ID 截图 + PIL 像素特征检测（如更新横幅的 `#036` 蓝色）。
+- **NW.js MenuItem 的 `label` 运行时可写**：注入脚本里改 `menuItem.label = '...'` 即可重命名上游菜单项，不必动编译产物，且天然覆盖全部 10 个语言版（v0.2.3 借此把上游勾选项改名）。
 - **Kerberos**：macOS 上不可用（控制台启动时一条 "Unable to setup kerberos" 属正常，官方版同样如此）。
 
 ---
@@ -111,18 +114,31 @@ npm run dist                           # 双架构 + DMG 一次出齐
 - **README 双语化**（版式参考 [charge-limit-helper](https://github.com/ljzxzxl/charge-limit-helper/blob/main/README.md)）：**单文件双语**——标题 → 居中下载链接（双语）→ `<table>` 图标+主截图 → 中英简介段 → `[English](#english) | [中文](#中文)` 锚点 → `## English` / `## 中文` 两个完整节。截图 2×2 HTML 表格放语言锚点**之前的公共区**（双语图题），避免两个语言节重复贴大图。
 - 资源：`docs/icon.png`（`sips -Z 256` 从 1024 图标缩出）、`docs/screenshots/*.jpg`（用户真机运行截图，按场景命名）。
 
+## 10. 【v0.2.3】统一更新机制
+
+上游的 Help 菜单本有一个 "Check for updates" 勾选项，但其检查逻辑指向已失效的 Google Sites 页面。`app/update-check.js`（`inject_js_end` 注入，与页面同 context）将整套更新体验接管到 GitHub Releases：
+
+- **接管原理**：覆写全局 `window.NW_AutoUpdateCheck` 为查询 `api.github.com/repos/ljzxzxl/meshcommander-for-mac/releases/latest`（比较 tag 与壳版本号）。上游勾选项的点击处理器 `NW_CheckForUpdateMenu` 经全局名字调用它，覆写后自动打通；勾选状态沿用上游的 `localStorage['checkForUpdate']`。
+- **菜单改造（hookMenu）**：遍历 `nw.Window.get().menu` 的 submenu.items，用 `=== window.NW_UpdateMenuItem` 定位勾选项（**不依赖文案**，兼容全部语言版），在其前面 insert 手动检查项 `Check for Updates...`，并把勾选项 label 运行时改为 `Automatically Check for Updates`（用户反馈两项文案重叠后的定稿）。菜单挂载时机不定，用 1 秒 × 10 次重试。
+- **交互**：自动检查（勾选项控制）在启动 10 秒后执行（`sessionStorage['updateChecked']` 防重复），发现新版在右下角显示 `#036` 蓝色横幅（Download 链接 + × 跳过该版本，记 `localStorage['skippedUpdateVersion']`）；手动检查用应用内 `messagebox(t, m)` 弹框反馈三种结果（网络不通 / 已是最新 / 有新版 + 下载链接，链接经 `window.MC_OpenDownloadPage` 调 `nw.Shell.openExternal`）。公共入口 `window.MC_CheckForUpdates`。
+- **演示钩子**：`MESHC_UPDATE_TEST=1` 环境变量启动可强制当前版本为 0.0.1，方便演示"发现新版"的横幅与弹框。
+- 不自动下载、不自动安装、除 GitHub Releases 查询外不上报任何数据（README 中英文均有此承诺，改动时保持一致）。
+
 ---
 
-## 10. 验证清单（改完自检）
+## 11. 验证清单（改完自检）
 
 - `npm run compile` 通过且每个文件 "leftover markers: 0"；产物替换进 `app/` 后 `node build/mkapp.mjs` 构建成功。
 - `./dist/arm64/MeshCommander.app/Contents/MacOS/nwjs --enable-logging=stderr` 启动，控制台除 kerberos 提示外**无 Uncaught 错误**。
 - 界面左上角显示 v0.9.7（或更新的上游版本号）；四个侧栏图标、右栏电脑大图、authcsme 图标不裂图。
 - Language 菜单切换任意语言不白屏，切回英文正常。
 - 真实 AMT 设备连接 / KVM 可用（需真机，交给维护者验收）。
+- 更新机制：Help 菜单出现 `Check for Updates...` 与 `Automatically Check for Updates` 两项（AppleScript 可读出）；`MESHC_UPDATE_TEST=1` 启动约 10 秒后右下角出横幅，手动检查弹框正常（应用内查 GitHub API 可能要等 5-10 秒）。
 - 发版：推 tag 后 `curl https://api.github.com/repos/ljzxzxl/meshcommander-for-mac/actions/runs` 确认 CI success，`/releases` 确认新 Release 挂上 arm64 + x64 两个 DMG。
 
-## 11. 约定
+## 12. 约定
+
+- git 身份为**仓库级**配置：`ljzxzxl <ljzxzxl@gmail.com>`（`git config user.name/user.email`，不动全局配置），换机器接手后先配置再提交。
 
 - 提交信息说明动机；`upstream/` 只做整体同步不做修改；UI 的改动一律改 `upstream/`→白名单→重新编译，**不直接手改 `app/commander*.htm`**（会被下次编译覆盖）。
 - `README.md` 是中英双语单文件（见第 9 节版式），改内容时**两个语言节必须同步更新**。
