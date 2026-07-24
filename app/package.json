@@ -1,7 +1,7 @@
 {
   "name": "meshcommander",
   "app_name": "MeshCommander",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Intel(R) Active Management Technology console tool",
   "main": "commander.htm",
   "node-main": "node-main.js",
