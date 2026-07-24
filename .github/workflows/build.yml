@@ -1,0 +1,65 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build (${{ matrix.arch }})
+    runs-on: macos-14
+    strategy:
+      matrix:
+        arch: [arm64, x64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache NW.js runtime
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          key: nwjs-${{ matrix.arch }}-${{ hashFiles('build/mkapp.mjs') }}
+
+      - name: Build app and DMG
+        run: node build/mkapp.mjs --arch ${{ matrix.arch }} --dmg
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MeshCommander-${{ matrix.arch }}
+          path: dist/*.dmg
+          if-no-files-found: error
+
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.dmg
+          generate_release_notes: true
+          body: |
+            Native macOS build of MeshCommander for Apple Silicon (arm64) and Intel (x64).
+
+            **Installation**: download the DMG matching your Mac, drag the app to Applications.
+            Builds are ad-hoc signed (not notarized) — on first launch run:
+            `xattr -cr /Applications/MeshCommander.app`
+            or right-click the app → Open, then allow it under System Settings → Privacy & Security.
