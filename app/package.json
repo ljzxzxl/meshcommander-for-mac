@@ -5,6 +5,7 @@
   "description": "Intel(R) Active Management Technology console tool",
   "main": "commander.htm",
   "node-main": "node-main.js",
+  "inject_js_start": "splash-inject.js",
   "inject_js_end": "update-check.js",
   "single-instance": false,
   "window": {
