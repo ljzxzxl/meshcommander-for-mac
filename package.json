@@ -1,6 +1,6 @@
 {
   "name": "meshcommander-for-macos",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Native macOS app (Apple Silicon & Intel) for MeshCommander, the Intel AMT remote management console",
   "type": "module",
   "scripts": {
