@@ -149,6 +149,9 @@
     };
 
     // --- Add the manual "Check for Updates..." item next to the checkbox ---
+    // Idempotent: upstream NW_SetupMainMenu rebuilds the whole menubar (and a
+    // fresh NW_UpdateMenuItem with the original label) every time the view
+    // changes, so this may run many times against different menu objects.
     function hookMenu() {
         try {
             var win = nw.Window.get();
@@ -159,10 +162,15 @@
                 if (!sub || !sub.items) continue;
                 for (var j = 0; j < sub.items.length; j++) {
                     if (sub.items[j] === window.NW_UpdateMenuItem) {
-                        var gui = require('nw.gui');
-                        // Rename the upstream checkbox so the two entries read
-                        // clearly: manual action vs. automatic-check switch.
+                        // The rebuilt checkbox comes back with the upstream
+                        // label, so always rename it here.
                         window.NW_UpdateMenuItem.label = 'Automatically Check for Updates';
+                        // Idempotent: don't insert a second manual item if this
+                        // submenu already has one.
+                        for (var k = 0; k < sub.items.length; k++) {
+                            if (sub.items[k].label === 'Check for Updates...') return true;
+                        }
+                        var gui = require('nw.gui');
                         sub.insert(new gui.MenuItem({ label: 'Check for Updates...', click: manualCheck }), j);
                         return true;
                     }
@@ -171,9 +179,28 @@
         } catch (e) { }
         return false;
     }
+
+    // Upstream NW_SetupMainMenu(currentView) rebuilds the entire menubar when
+    // the view changes, discarding our inserted item and rename. Wrap it so we
+    // re-apply hookMenu after every rebuild.
+    function wrapSetupMenu() {
+        var fn = window.NW_SetupMainMenu;
+        if (typeof fn !== 'function') return false;
+        if (fn.__mcWrapped) return true;
+        window.NW_SetupMainMenu = function () {
+            var r = fn.apply(this, arguments);
+            try { hookMenu(); } catch (e) { }
+            return r;
+        };
+        window.NW_SetupMainMenu.__mcWrapped = true;
+        return true;
+    }
+
     var hookTries = 0;
     (function tryHook() {
-        if (hookMenu() || ++hookTries > 10) return;
+        var wrapped = wrapSetupMenu();  // wrap early so future rebuilds recover
+        var hooked = hookMenu();        // handle the currently existing menu
+        if ((wrapped && hooked) || ++hookTries > 15) return;
         setTimeout(tryHook, 1000);
     })();
 
